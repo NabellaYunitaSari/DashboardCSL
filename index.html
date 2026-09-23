@@ -1394,10 +1394,121 @@ function renderRegionStacked(id,p){
   const traces=(p.series||[]).map(s=>({type:'bar',orientation:'h',name:s.name,x:s.values,y:p.regions,marker:{color:s.color},customdata:s.counts.map((c,i)=>[c,p.totals[i],s.profileLabel]),text:s.values.map(v=>v>=6?`${v.toFixed(1)}%`:''),textposition:'inside',insidetextanchor:'middle',hovertemplate:'<b>%{y}</b><br>%{customdata[2]}: %{x:.1f}%<br>Responden profile: %{customdata[0]}<br>Total responden: %{customdata[1]}<extra></extra>'}));
   makePlot(el,traces,{barmode:'stack',height:p.height,margin:{l:90,r:20,t:10,b:45},xaxis:{title:'Persentase Responden',range:[0,100],ticksuffix:'%'},yaxis:{autorange:'reversed',automargin:true},legend:{orientation:'h',y:-.12,x:.5,xanchor:'center'},uniformtext:{mode:'hide',minsize:8}});
 }
-function renderDominantPlot(id,p){
-  const el=document.getElementById(id);if(!el)return;
-  const traces=(p.series||[]).map(s=>({type:'bar',name:s.name,x:p.xLabels,y:s.values,marker:{color:s.color},width:p.barWidth,text:s.values.map(v=>v>=7?`${v.toFixed(1)}%`:''),textposition:'inside',hovertemplate:`<b>%{x}</b><br>${escapeHtml(s.name)}: %{y:.1f}%<extra></extra>`}));
-  makePlot(el,traces,{barmode:'stack',height:p.height||300,margin:{l:55,r:15,t:10,b:70},xaxis:{title:p.xAxisTitle,tickangle:-18,automargin:true},yaxis:{title:p.yAxisTitle,range:[0,100],ticksuffix:'%'},legend:{title:{text:p.legendTitle||''},orientation:'h',y:-.28,x:.5,xanchor:'center'}});
+function renderDominantPlot(id, p) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const traces = (p.series || []).map(s => ({
+    type: 'bar',
+    name: s.name,
+    x: p.xLabels,
+    y: s.values,
+    marker: {
+      color: s.color
+    },
+    width: p.barWidth,
+
+    // Hanya tampilkan angka jika cukup besar
+    // agar label kecil tidak saling bertumpuk.
+    text: s.values.map(v =>
+      v >= 8 ? `${v.toFixed(1)}%` : ''
+    ),
+
+    textposition: 'inside',
+    insidetextanchor: 'middle',
+    textangle: 0,
+    textfont: {
+      size: 10
+    },
+
+    hovertemplate:
+      `<b>%{x}</b><br>` +
+      `${escapeHtml(s.name)}: %{y:.1f}%` +
+      `<extra></extra>`
+  }));
+
+  makePlot(el, traces, {
+    barmode: 'stack',
+
+    // Tetap menggunakan tinggi dari backend,
+    // tetapi fallback dibuat sedikit lebih tinggi.
+    height: p.height || 320,
+
+    // Tambahkan ruang bawah agar label X
+    // dan legend tidak bertumpuk.
+    margin: {
+      l: 60,
+      r: 20,
+      t: 10,
+      b: 105
+    },
+
+    xaxis: {
+      // Judul sumbu X tetap ada,
+      // tetapi diberi jarak lebih aman.
+      title: {
+        text: p.xAxisTitle || '',
+        standoff: 12
+      },
+
+      // Label dibuat sedikit lebih miring
+      // supaya kategori panjang lebih mudah dibaca.
+      tickangle: -18,
+
+      automargin: true,
+
+      tickfont: {
+        size: 10
+      }
+    },
+
+    yaxis: {
+      title: {
+        text: p.yAxisTitle || '',
+        standoff: 8
+      },
+
+      range: [0, 100],
+      ticksuffix: '%',
+
+      automargin: true,
+
+      tickfont: {
+        size: 10
+      }
+    },
+
+    legend: {
+      title: {
+        text: p.legendTitle || ''
+      },
+
+      orientation: 'h',
+
+      // Turunkan legend agar tidak menabrak
+      // judul sumbu X.
+      y: -0.40,
+
+      x: 0.5,
+      xanchor: 'center',
+
+      yanchor: 'top',
+
+      font: {
+        size: 10
+      },
+
+      title_font: {
+        size: 10
+      }
+    },
+
+    // Membantu Plotly menjaga teks tetap rapi.
+    uniformtext: {
+      mode: 'hide',
+      minsize: 8
+    }
+  });
 }
 async function renderRegionPage(){
   setLoading(true);
