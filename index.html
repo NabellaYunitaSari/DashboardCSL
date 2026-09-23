@@ -174,6 +174,66 @@
     /* ===== REGION PAGE ===== */
     .region-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}.region-two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}.region-card{padding:12px}.region-detail-box{background:#FAFBFC;border:1px solid #E7E9EC;border-left:4px solid #1665D8;border-radius:8px;padding:10px 14px;margin-bottom:10px}.region-detail-box.culture{border-left-color:#FF6B00}.region-detail-title{font-weight:700;font-size:.92rem;color:#262626;margin-bottom:3px}.region-detail-count{font-weight:500;color:#666;font-size:.82rem}.region-detail-body{font-size:.85rem;color:#37474F;line-height:1.5}.methodology-box{background:#F8FAFC;border:1px solid #E7E9EC;border-radius:8px;padding:12px 14px;margin:12px 0}.methodology-title{font-size:12px;font-weight:800;color:#262626;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px}.methodology-body{font-size:12.5px;line-height:1.55;color:#475569}.variable-list{margin:8px 0 0;padding-left:18px}.variable-list li{margin:4px 0}
 
+    /* ===== REGION ACCORDION ===== */
+
+  .region-accordion {
+    margin-top: 12px;
+    border: 1px solid #E7E9EC;
+    border-radius: 8px;
+    background: #FFFFFF;
+    overflow: hidden;
+  }
+
+  .region-accordion summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 13px 15px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #262626;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #F8FAFC;
+    user-select: none;
+  }
+
+  .region-accordion summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .region-accordion summary::after {
+    content: '⌄';
+    font-size: 16px;
+    font-weight: 700;
+    color: #667085;
+    transition: transform .2s ease;
+  }
+
+  .region-accordion[open] summary::after {
+    transform: rotate(180deg);
+  }
+
+  .region-accordion summary:hover {
+    background: #F1F5F9;
+  }
+
+  .region-accordion-content {
+    padding: 12px 14px 14px;
+    border-top: 1px solid #E7E9EC;
+  }
+
+  .region-accordion-content .region-detail-box {
+    margin-bottom: 10px;
+  }
+
+  .region-accordion-content .region-detail-box:last-child {
+    margin-bottom: 0;
+  }
+
+  .region-accordion-content .methodology-box {
+    margin: 0;
+  }
     /* ===== FRAMEWORK ===== */
     .fw-shell,.fw-shell *{font-family:Poppins,sans-serif!important;box-sizing:border-box;text-align:center!important}
     .fw-shell{background:#fff;border:1px solid #ececec;border-radius:18px;padding:22px 18px 24px;margin:10px 0 22px;box-shadow:0 8px 24px rgba(36,20,10,.06)}
@@ -1383,11 +1443,66 @@ function selectFromOptions(id,label,options,selected){
 function markdownBold(s){return escapeHtml(s||'').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}
 function regionDetailsHtml(details,culture=false){
   if(!details?.items?.length)return '';
-  return `<div class="region-card" style="margin-top:12px"><div class="chart-title">${escapeHtml(details.title)}</div>${details.caption?`<div class="chart-subtitle">${escapeHtml(details.caption)}</div>`:''}${details.items.map(x=>`<div class="region-detail-box ${culture?'culture':''}"><div class="region-detail-title">${escapeHtml(x.title)} <span class="region-detail-count">${escapeHtml(x.countText||'')}</span></div><div class="region-detail-body">${escapeHtml(x.description||'')}${x.character?`<br><b>Karakter:</b> ${escapeHtml(x.character)}`:''}<br><b>Wilayah:</b> ${escapeHtml(x.regions||'-')}</div></div>`).join('')}</div>`;
+
+  return `
+    <details class="region-accordion">
+      <summary>${escapeHtml(details.title)}</summary>
+
+      <div class="region-accordion-content">
+        ${details.caption
+          ? `<div class="chart-subtitle" style="margin-bottom:10px">
+               ${escapeHtml(details.caption)}
+             </div>`
+          : ''
+        }
+
+        ${details.items.map(x => `
+          <div class="region-detail-box ${culture ? 'culture' : ''}">
+            <div class="region-detail-title">
+              ${escapeHtml(x.title)}
+              <span class="region-detail-count">
+                ${escapeHtml(x.countText || '')}
+              </span>
+            </div>
+
+            <div class="region-detail-body">
+              ${escapeHtml(x.description || '')}
+
+              ${x.character
+                ? `<br><b>Karakter:</b> ${escapeHtml(x.character)}`
+                : ''
+              }
+
+              <br>
+              <b>Wilayah:</b> ${escapeHtml(x.regions || '-')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </details>
+  `;
 }
 function insightItemsHtml(box){
   if(!box?.items?.length)return infoBox(box?.emptyMessage||'Belum ada insight.');
   return box.items.map(x=>`<div class="region-detail-box"><div class="region-detail-title">${escapeHtml(x.header)}</div><div class="region-detail-body"><b>Profile Mayoritas:</b> ${escapeHtml(x.majorityProfile)}<br><b>Wilayah Sesuai/Valid:</b> ${escapeHtml(x.regionsMatched)} / ${escapeHtml(x.regionsValid)}<br><b>Konsistensi:</b> ${escapeHtml(x.consistency)}<br><b>Kemiripan Distribusi:</b> ${escapeHtml(x.similarity)} · ${escapeHtml(x.category)}</div></div>`).join('');
+}
+function insightAccordionHtml(box, iconClass){
+  if(!box)return '';
+
+  return `
+    <details class="region-accordion">
+      <summary>
+        <span>
+          <i class="${iconClass}" style="margin-right:8px"></i>
+          ${escapeHtml(box.title || '')}
+        </span>
+      </summary>
+
+      <div class="region-accordion-content">
+        ${insightItemsHtml(box)}
+      </div>
+    </details>
+  `;
 }
 function renderRegionStacked(id,p){
   const el=document.getElementById(id);if(!el)return;
@@ -1522,8 +1637,58 @@ async function renderRegionPage(){
       ${p.unmatchedRegions?.length?`<details class="warning-box"><summary>${p.unmatchedRegions.length} wilayah tidak terpasangkan dengan data cluster</summary><div style="margin-top:7px">${escapeHtml(p.unmatchedRegions.join(', '))}</div></details>`:''}
       ${renderKpis(p.kpi||[])}<div style="height:14px"></div>
       ${chartCard(p.stackedChart.title,p.stackedChart.subtitle,'region-stacked','region-card')}
-      <div class="region-two-col" style="margin-top:16px"><div>${chartCard(p.clusterDominantChart.title,p.clusterDominantChart.subtitle,'region-cluster-chart','region-card')}<div class="methodology-box"><div class="methodology-title">${escapeHtml(meth.title||'')}</div><div class="methodology-body">${markdownBold(meth.intro||'')}<div style="font-weight:700;margin-top:8px">${escapeHtml(meth.variablesTitle||'')}</div><ul class="variable-list">${(meth.variables||[]).map(v=>`<li><b>${escapeHtml(v.name)}</b> — ${escapeHtml(v.desc)}</li>`).join('')}</ul></div></div>${regionDetailsHtml(p.clusterDetails,false)}</div><div>${chartCard(p.cultureDominantChart.title,p.cultureDominantChart.subtitle,'region-culture-chart','region-card')}${regionDetailsHtml(p.cultureDetails,true)}</div></div>
-      <div class="region-two-col" style="margin-top:16px"><div class="insight-box"><div class="insight-box-header"><i class="fa-solid fa-chart-line"></i>${escapeHtml(p.clusterInsight.title)}</div><div class="insight-box-body">${insightItemsHtml(p.clusterInsight)}</div></div><div class="reco-box"><div class="reco-box-header"><i class="fa-solid fa-people-group"></i>${escapeHtml(p.cultureInsight.title)}</div><div class="reco-box-body">${insightItemsHtml(p.cultureInsight)}</div></div></div>
+      <!-- INSIGHT -->
+      <div class="region-info-stack" style="margin-top:16px">
+
+        ${insightAccordionHtml(
+          p.clusterInsight,
+          'fa-solid fa-chart-line'
+        )}
+
+        ${insightAccordionHtml(
+          p.cultureInsight,
+          'fa-solid fa-people-group'
+        )}
+
+        <!-- KETERANGAN CLUSTER BPS -->
+        ${regionDetailsHtml(
+          p.clusterDetails,
+          false
+        )}
+
+        <!-- KETERANGAN KELOMPOK BUDAYA -->
+        ${regionDetailsHtml(
+          p.cultureDetails,
+          true
+        )}
+
+        <!-- DASAR PEMBENTUKAN CLUSTER -->
+        <details class="region-accordion">
+          <summary>
+            ${escapeHtml(meth.title || 'DASAR PEMBENTUKAN CLUSTER WILAYAH')}
+          </summary>
+
+          <div class="region-accordion-content">
+            <div class="methodology-body">
+              ${markdownBold(meth.intro || '')}
+
+              <div style="font-weight:700;margin-top:8px">
+                ${escapeHtml(meth.variablesTitle || '')}
+              </div>
+
+              <ul class="variable-list">
+                ${(meth.variables || []).map(v => `
+                  <li>
+                    <b>${escapeHtml(v.name)}</b>
+                    — ${escapeHtml(v.desc)}
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          </div>
+        </details>
+
+      </div>
       </section>`;
     ['region-h','region-cluster','region-sort'].forEach(id=>document.getElementById(id).addEventListener('change',async()=>{state.region.h=document.getElementById('region-h').value;state.region.cluster=document.getElementById('region-cluster').value;state.region.sort=document.getElementById('region-sort').value;await renderRegionPage()}));
     renderRegionStacked('region-stacked',p.stackedChart);renderDominantPlot('region-cluster-chart',p.clusterDominantChart);renderDominantPlot('region-culture-chart',p.cultureDominantChart);window.scrollTo({top:0,behavior:'auto'});
