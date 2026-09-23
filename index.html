@@ -1643,19 +1643,21 @@ async function renderRegionPage(){
         'region-card'
       )}
 
-      ${chartCard(
-        p.clusterDominantChart.title,
-        p.clusterDominantChart.subtitle,
-        'region-cluster-chart',
-        'region-card'
-      )}
+      <div class="region-dominant-charts">
+        ${chartCard(
+          p.clusterDominantChart.title,
+          p.clusterDominantChart.subtitle,
+          'region-cluster-chart',
+          'region-card'
+        )}
 
-      ${chartCard(
-        p.cultureDominantChart.title,
-        p.cultureDominantChart.subtitle,
-        'region-culture-chart',
-        'region-card'
-      )}
+        ${chartCard(
+          p.cultureDominantChart.title,
+          p.cultureDominantChart.subtitle,
+          'region-culture-chart',
+          'region-card'
+        )}
+      </div>
 
       <!-- INSIGHT -->
       <div class="region-info-stack" style="margin-top:16px">
