@@ -1437,10 +1437,10 @@ function renderDominantPlot(id, p) {
     // Tambahkan ruang bawah agar label X
     // dan legend tidak bertumpuk.
     margin: {
-      l: 60,
-      r: 20,
+      l: 55,
+      r: 15,
       t: 10,
-      b: 105
+      b: 125
     },
 
     xaxis: {
@@ -1448,12 +1448,12 @@ function renderDominantPlot(id, p) {
       // tetapi diberi jarak lebih aman.
       title: {
         text: p.xAxisTitle || '',
-        standoff: 12
+        standoff: 10
       },
 
       // Label dibuat sedikit lebih miring
       // supaya kategori panjang lebih mudah dibaca.
-      tickangle: -18,
+      tickangle: -12,
 
       automargin: true,
 
@@ -1487,7 +1487,7 @@ function renderDominantPlot(id, p) {
 
       // Turunkan legend agar tidak menabrak
       // judul sumbu X.
-      y: -0.40,
+      y: -0.45,
 
       x: 0.5,
       xanchor: 'center',
