@@ -1636,7 +1636,27 @@ async function renderRegionPage(){
       <div class="region-filters">${selectFromOptions('region-h','Pilih H',p.options.h,state.region.h)}${selectFromOptions('region-cluster','Profil / Cluster Wilayah',p.options.cluster,state.region.cluster)}${selectFromOptions('region-sort','Urutkan Berdasarkan',p.options.sortProfile,state.region.sort)}</div>
       ${p.unmatchedRegions?.length?`<details class="warning-box"><summary>${p.unmatchedRegions.length} wilayah tidak terpasangkan dengan data cluster</summary><div style="margin-top:7px">${escapeHtml(p.unmatchedRegions.join(', '))}</div></details>`:''}
       ${renderKpis(p.kpi||[])}<div style="height:14px"></div>
-      ${chartCard(p.stackedChart.title,p.stackedChart.subtitle,'region-stacked','region-card')}
+      ${chartCard(
+        p.stackedChart.title,
+        p.stackedChart.subtitle,
+        'region-stacked',
+        'region-card'
+      )}
+
+      ${chartCard(
+        p.clusterDominantChart.title,
+        p.clusterDominantChart.subtitle,
+        'region-cluster-chart',
+        'region-card'
+      )}
+
+      ${chartCard(
+        p.cultureDominantChart.title,
+        p.cultureDominantChart.subtitle,
+        'region-culture-chart',
+        'region-card'
+      )}
+
       <!-- INSIGHT -->
       <div class="region-info-stack" style="margin-top:16px">
 
