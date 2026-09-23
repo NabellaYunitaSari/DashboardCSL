@@ -169,11 +169,18 @@
     /* ===== DEMOGRAPHICS ===== */
     .demographic-grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.demographic-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.demographic-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.demographic-card{height:390px;min-height:390px;max-height:390px;overflow:hidden;display:flex;flex-direction:column}.chart-viewport{height:330px;min-height:330px;max-height:330px;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}.chart-viewport::-webkit-scrollbar{width:6px}.chart-viewport::-webkit-scrollbar-thumb{background:#D8DBDF;border-radius:20px}
     .fixed-chart-card{height:245px;min-height:245px;max-height:245px;overflow:hidden}.fixed-chart-card .legend-row{display:flex;flex-wrap:wrap;align-items:center;font-size:10px;line-height:1.45;color:#667085;padding:0 4px 4px}.legend-item{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;margin:2px 12px 2px 0}.legend-dot{display:inline-block;width:10px;height:10px;border-radius:2px}
-    .nps-card{height:390px;min-height:390px;max-height:390px;overflow:hidden}.nps-caption{font-size:11px;color:#666;margin:0 4px 6px}
+    .nps-card{height:390px;min-height:390px;max-height:390px;overflow:hidden}
+    .nps-card .chart-viewport{overflow-x:visible;}
+    .nps-caption{font-size:11px;color:#666;margin:0 4px 6px}
 
     /* ===== REGION PAGE ===== */
     .region-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}.region-two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}.region-card{padding:12px}.region-detail-box{background:#FAFBFC;border:1px solid #E7E9EC;border-left:4px solid #1665D8;border-radius:8px;padding:10px 14px;margin-bottom:10px}.region-detail-box.culture{border-left-color:#FF6B00}.region-detail-title{font-weight:700;font-size:.92rem;color:#262626;margin-bottom:3px}.region-detail-count{font-weight:500;color:#666;font-size:.82rem}.region-detail-body{font-size:.85rem;color:#37474F;line-height:1.5}.methodology-box{background:#F8FAFC;border:1px solid #E7E9EC;border-radius:8px;padding:12px 14px;margin:12px 0}.methodology-title{font-size:12px;font-weight:800;color:#262626;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px}.methodology-body{font-size:12.5px;line-height:1.55;color:#475569}.variable-list{margin:8px 0 0;padding-left:18px}.variable-list li{margin:4px 0}
-
+    .region-dominant-charts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
     /* ===== REGION ACCORDION ===== */
 
   .region-accordion {
@@ -1225,7 +1232,7 @@ function renderReasonsPlot(id,p){
 function renderNpsGauge(id,p,captionId){
   const el=document.getElementById(id);if(!el)return;
   if(!p?.available){el.innerHTML=infoBox(p?.message||'Data tidak tersedia.');return}
-  makePlot(el,[{type:'indicator',mode:'gauge+number',value:p.value,number:{suffix:'',font:{size:30,color:'#212121'}},gauge:{axis:{range:[0,100],tickwidth:1,tickcolor:'#666'},bar:{color:p.barColor||'#212121',thickness:.25},steps:(p.steps||[]).map(s=>({range:s.range,color:s.color})),threshold:{line:{color:'#000000',width:4},thickness:.8,value:p.value}}}],{height:p.height||250,margin:{l:15,r:15,t:10,b:10}});
+  makePlot(el,[{type:'indicator',mode:'gauge+number',value:p.value,number:{suffix:'',font:{size:30,color:'#212121'}},gauge:{axis:{range:[0,100],tickwidth:1,tickcolor:'#666'},bar:{color:p.barColor||'#212121',thickness:.25},steps:(p.steps||[]).map(s=>({range:s.range,color:s.color})),threshold:{line:{color:'#000000',width:4},thickness:.8,value:p.value}}}],{height:p.height||250,margin:{l:28,r:28,t:10,b:10}});
   const cap=document.getElementById(captionId);if(cap)cap.textContent=p.caption||'';
 }
 
