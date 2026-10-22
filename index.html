@@ -341,9 +341,9 @@ const state = {
   activePage:'H1 SALES',
   lastUpdate:new Date(),
   unit:{
-    sales:{year:'Semua',semester:'Semester 1',md:'Semua',layer:'Semua',kar:'Semua',kab:'Semua',dealer:'Semua',profile:'P1',matrixMd:'M2Z',selectedQuadrant:null,heatmap:null},
-    service:{year:'Semua',semester:'Semester 1',md:'Semua',layer:'Semua',kar:'Semua',kab:'Semua',dealer:'Semua',profile:'P1',matrixMd:'M2Z',selectedQuadrant:null,heatmap:null},
-    parts:{year:'Semua',semester:'Semester 1',md:'Semua',layer:'Semua',kar:'Semua',kab:'Semua',dealer:'Semua',profile:'P1',matrixMd:'M2Z',selectedQuadrant:null,heatmap:null}
+    sales:{year:'',semester:'Semester 1',md:'Semua',layer:'Semua',kar:'Semua',kab:'Semua',dealer:'Semua',profile:'P1',matrixMd:'M2Z',selectedQuadrant:null,heatmap:null},
+    service:{year:'',semester:'Semester 1',md:'Semua',layer:'Semua',kar:'Semua',kab:'Semua',dealer:'Semua',profile:'P1',matrixMd:'M2Z',selectedQuadrant:null,heatmap:null},
+    parts:{year:'',semester:'Semester 1',md:'Semua',layer:'Semua',kar:'Semua',kab:'Semua',dealer:'Semua',profile:'P1',matrixMd:'M2Z',selectedQuadrant:null,heatmap:null}
   },
   region:{h:'H1',cluster:'Semua',sort:'Profile Wilayah'},
   geometry:null,
@@ -451,6 +451,10 @@ function buildSelect(fieldId,payload,paramKey,unit){
   let options=[];
   if(Array.isArray(payload.options) && payload.options.length && typeof payload.options[0]==='object') options=payload.options.map(o=>({value:String(o.value),label:String(o.label)}));
   else options=(payload.options||[]).map(v=>({value:String(v),label:String(v)}));
+  if(paramKey==='year'){
+    const nonAll=options.filter(o=>o.value.trim().toLowerCase()!=='semua');
+    if(nonAll.length) options=nonAll;
+  }
   const htmlOptions=options.map(o=>`<option value="${escapeHtml(o.value)}" ${String(payload.selected)===o.value?'selected':''}>${escapeHtml(o.label)}</option>`).join('');
   return `<div class="filter-field"><label for="${fieldId}">${escapeHtml(payload.label)}</label><select id="${fieldId}" data-unit="${unit}" data-param="${paramKey}">${htmlOptions}</select></div>`;
 }
@@ -488,7 +492,7 @@ function renderPageSelector(){
 function resetActivePageState(){
   const unit=UNIT_BY_PAGE[state.activePage];
   if(unit){
-    state.unit[unit]={year:'Semua',semester:'Semester 1',md:'Semua',layer:'Semua',kar:'Semua',kab:'Semua',dealer:'Semua',profile:'P1',matrixMd:'M2Z',selectedQuadrant:null,heatmap:state.unit[unit]?.heatmap||null};
+    state.unit[unit]={year:'',semester:'Semester 1',md:'Semua',layer:'Semua',kar:'Semua',kab:'Semua',dealer:'Semua',profile:'P1',matrixMd:'M2Z',selectedQuadrant:null,heatmap:state.unit[unit]?.heatmap||null};
   }else if(state.activePage==='PROFIL WILAYAH'){
     state.region={h:'H1',cluster:'Semua',sort:'Profile Wilayah'};
   }
@@ -1566,8 +1570,24 @@ async function renderUnitPage(unit,{preserveScroll=false,skipHeatmap=false}={}){
     const s=state.unit[unit];
     const calls=[apiGet('unitPage',unitParams(unit)),apiGet('matrix',{...unitParams(unit),matrixMd:s.matrixMd})];
     if(!skipHeatmap || !s.heatmap) calls.push(apiGet('heatmap',{unit}));
-    const results=await Promise.all(calls), page=results[0], matrix=results[1].matrix;
+    const results=await Promise.all(calls);
+    let page=results[0], matrix=results[1].matrix;
     const heatmap=(results[2]?.heatmap)||s.heatmap;
+    const yearOptsRaw=(page.filterOptions?.year?.options||[]).map(o=>typeof o==='object'?String(o.value):String(o));
+    const realYears=yearOptsRaw.filter(y=>y && y.trim().toLowerCase()!=='semua');
+    if(realYears.length && page.filterOptions?.year){
+      page.filterOptions.year.options=realYears;
+      const curYr=String(page.filterOptions.year.selected||'');
+      if(!curYr || curYr.toLowerCase()==='semua' || !realYears.includes(curYr)){
+        s.year=realYears[realYears.length-1];
+        const retryRes=await Promise.all([apiGet('unitPage',unitParams(unit)),apiGet('matrix',{...unitParams(unit),matrixMd:s.matrixMd})]);
+        page=retryRes[0]; matrix=retryRes[1].matrix;
+        if(page.filterOptions?.year){
+          page.filterOptions.year.options=realYears;
+          page.filterOptions.year.selected=s.year;
+        }
+      }
+    }
     s.heatmap=heatmap;s.matrix=matrix;s.page=page;syncUnitStateFromPayload(unit,page);
     const sec1=page.section1||{}, sec3=page.section3||{};
     const scopeKey=[s.year,s.semester,s.md,s.layer,s.kar,s.kab].join('||');
