@@ -472,8 +472,10 @@ function renderFilters(unit,fo){
 function bindFilterEvents(unit){
   document.querySelectorAll(`#filters-${unit} select[data-param]`).forEach(sel=>{
     sel.addEventListener('change',async e=>{
-      state.unit[unit][e.target.dataset.param]=e.target.value;
-      await renderUnitPage(unit,{preserveScroll:true,skipHeatmap:true});
+      const param=e.target.dataset.param;
+      state.unit[unit][param]=e.target.value;
+      const skipHm=(param!=='year' && param!=='semester');
+      await renderUnitPage(unit,{preserveScroll:true,skipHeatmap:skipHm});
     });
   });
 }
@@ -492,7 +494,7 @@ function renderPageSelector(){
 function resetActivePageState(){
   const unit=UNIT_BY_PAGE[state.activePage];
   if(unit){
-    state.unit[unit]={year:'',semester:'Semester 1',md:'Semua',layer:'Semua',kar:'Semua',kab:'Semua',dealer:'Semua',profile:'P1',matrixMd:'M2Z',selectedQuadrant:null,heatmap:state.unit[unit]?.heatmap||null};
+    state.unit[unit]={year:'',semester:'Semester 1',md:'Semua',layer:'Semua',kar:'Semua',kab:'Semua',dealer:'Semua',profile:'P1',matrixMd:'M2Z',selectedQuadrant:null,heatmap:null};
   }else if(state.activePage==='PROFIL WILAYAH'){
     state.region={h:'H1',cluster:'Semua',sort:'Profile Wilayah'};
   }
@@ -1568,11 +1570,13 @@ async function renderUnitPage(unit,{preserveScroll=false,skipHeatmap=false}={}){
   const scrollY=preserveScroll?window.scrollY:0; setLoading(true);
   try{
     const s=state.unit[unit];
+    const reqYearBefore=s.year;
+    const reqSemBefore=s.semester;
     const calls=[apiGet('unitPage',unitParams(unit)),apiGet('matrix',{...unitParams(unit),matrixMd:s.matrixMd})];
-    if(!skipHeatmap || !s.heatmap) calls.push(apiGet('heatmap',{unit}));
+    if(!skipHeatmap || !s.heatmap) calls.push(apiGet('heatmap',unitParams(unit)));
     const results=await Promise.all(calls);
     let page=results[0], matrix=results[1].matrix;
-    const heatmap=(results[2]?.heatmap)||s.heatmap;
+    let heatmap=page.heatmap || page.section3?.heatmap || (results[2]?.heatmap) || s.heatmap;
     const yearOptsRaw=(page.filterOptions?.year?.options||[]).map(o=>typeof o==='object'?String(o.value):String(o));
     const realYears=yearOptsRaw.filter(y=>y && y.trim().toLowerCase()!=='semua');
     if(realYears.length && page.filterOptions?.year){
@@ -1580,15 +1584,25 @@ async function renderUnitPage(unit,{preserveScroll=false,skipHeatmap=false}={}){
       const curYr=String(page.filterOptions.year.selected||'');
       if(!curYr || curYr.toLowerCase()==='semua' || !realYears.includes(curYr)){
         s.year=realYears[realYears.length-1];
-        const retryRes=await Promise.all([apiGet('unitPage',unitParams(unit)),apiGet('matrix',{...unitParams(unit),matrixMd:s.matrixMd})]);
+        const retryRes=await Promise.all([
+          apiGet('unitPage',unitParams(unit)),
+          apiGet('matrix',{...unitParams(unit),matrixMd:s.matrixMd}),
+          apiGet('heatmap',unitParams(unit))
+        ]);
         page=retryRes[0]; matrix=retryRes[1].matrix;
+        heatmap=page.heatmap || page.section3?.heatmap || (retryRes[2]?.heatmap) || heatmap;
         if(page.filterOptions?.year){
           page.filterOptions.year.options=realYears;
           page.filterOptions.year.selected=s.year;
         }
       }
     }
-    s.heatmap=heatmap;s.matrix=matrix;s.page=page;syncUnitStateFromPayload(unit,page);
+    syncUnitStateFromPayload(unit,page);
+    if(!page.heatmap && !page.section3?.heatmap && (String(reqYearBefore)!==String(s.year) || String(reqSemBefore)!==String(s.semester))){
+      const hmRes=await apiGet('heatmap',unitParams(unit));
+      if(hmRes?.heatmap) heatmap=hmRes.heatmap;
+    }
+    s.heatmap=heatmap;s.matrix=matrix;s.page=page;
     const sec1=page.section1||{}, sec3=page.section3||{};
     const scopeKey=[s.year,s.semester,s.md,s.layer,s.kar,s.kab].join('||');
     if(sec1.ranking?.show && !sec1.ranking.empty){
