@@ -91,7 +91,7 @@
     .ntt-inset svg{position:absolute;left:0;right:0;bottom:0;width:100%;height:176px;background:#E9EEF2;pointer-events:none}
 
     /* ===== FILTERS ===== */
-    .filters-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1.3fr 1.3fr 2.1fr;gap:10px;align-items:end}
+    .filters-scroll{max-width:100%;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:thin;scrollbar-color:#B8BEC5 #F3F4F6}.filters-grid{display:grid;grid-template-columns:minmax(82px,.65fr) minmax(118px,.9fr) minmax(110px,.85fr) minmax(90px,.7fr) minmax(145px,1.1fr) minmax(190px,1.4fr) minmax(150px,1.1fr) minmax(var(--dealer-filter-width,300px),2.2fr);gap:10px;align-items:end;min-width:1055px}.filters-grid label{white-space:nowrap}
     .filter-field{min-width:0}
     .filter-field label{display:block;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;margin:0 0 5px}
     .filter-field select{width:100%;height:38px;border:1px solid var(--csl-border);border-radius:7px;background:#fff;color:#262626;padding:0 9px;font-size:12px;outline:none;min-width:0}
@@ -292,10 +292,10 @@
     .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.62);backdrop-filter:blur(1px);z-index:999999;display:none;align-items:center;justify-content:center}.loading-overlay.show{display:flex}.loading-pill{background:#fff;border:1px solid #E7E9EC;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,.12);padding:12px 16px;font-size:12.5px;font-weight:700;color:#444;display:flex;align-items:center;gap:10px}.spinner{width:16px;height:16px;border:2px solid #FFD0C4;border-top-color:#E60012;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 
     @media(max-width:1100px){
-      .top-header{grid-template-columns:1fr auto auto;}.csl-update-time{grid-column:1/2;grid-row:2;text-align:left;left:0}.filters-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.charts-grid-3{grid-template-columns:1fr}.profile-top-grid{grid-template-columns:1fr}.profile-equal-card{height:auto;max-height:none}.demographic-grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}.matrix-layout{grid-template-columns:1fr}.region-two-col{grid-template-columns:1fr}.fw-grid-a{grid-template-columns:repeat(2,minmax(220px,1fr))}.fw-grid-b{grid-template-columns:repeat(3,minmax(220px,1fr))}.fw-insight-grid{grid-template-columns:repeat(2,minmax(220px,1fr))}
+      .top-header{grid-template-columns:1fr auto auto;}.csl-update-time{grid-column:1/2;grid-row:2;text-align:left;left:0}.charts-grid-3{grid-template-columns:1fr}.profile-top-grid{grid-template-columns:1fr}.profile-equal-card{height:auto;max-height:none}.demographic-grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}.matrix-layout{grid-template-columns:1fr}.region-two-col{grid-template-columns:1fr}.fw-grid-a{grid-template-columns:repeat(2,minmax(220px,1fr))}.fw-grid-b{grid-template-columns:repeat(3,minmax(220px,1fr))}.fw-insight-grid{grid-template-columns:repeat(2,minmax(220px,1fr))}
     }
     @media(max-width:760px){
-      .app-container{padding:.2rem .65rem 2rem}.top-header{padding:12px;grid-template-columns:1fr 1fr}.csl-header-brand{grid-column:1/-1}.csl-brand h1{font-size:15px}.csl-update-time{grid-column:1/-1;grid-row:auto}.page-btn{padding:0 12px}.filters-grid,.kpi-grid,.charts-grid-2,.ranking-grid,.demographic-grid-4,.demographic-grid-3,.demographic-grid-2,.region-filters{grid-template-columns:1fr}.quadrant-chips{grid-template-columns:repeat(2,1fr)}.ntt-inset{min-width:210px;width:44%;height:170px}.map-legend{left:15px}.fw-grid-a,.fw-grid-b{grid-template-columns:1fr;overflow-x:visible}.fw-insight-grid{grid-template-columns:1fr}.fw-step{min-width:0}.fw-shell{padding:17px 12px}.fw-title{font-size:19px}
+      .app-container{padding:.2rem .65rem 2rem}.top-header{padding:12px;grid-template-columns:1fr 1fr}.csl-header-brand{grid-column:1/-1}.csl-brand h1{font-size:15px}.csl-update-time{grid-column:1/-1;grid-row:auto}.page-btn{padding:0 12px}.kpi-grid,.charts-grid-2,.ranking-grid,.demographic-grid-4,.demographic-grid-3,.demographic-grid-2,.region-filters{grid-template-columns:1fr}.quadrant-chips{grid-template-columns:repeat(2,1fr)}.ntt-inset{min-width:210px;width:44%;height:170px}.map-legend{left:15px}.fw-grid-a,.fw-grid-b{grid-template-columns:1fr;overflow-x:visible}.fw-insight-grid{grid-template-columns:1fr}.fw-step{min-width:0}.fw-shell{padding:17px 12px}.fw-title{font-size:19px}
     }
     .leaflet-container {
         background: #d9d9d9 !important;
@@ -401,7 +401,7 @@ function apiGet(action, params={}){
 
 function unitParams(unit){
   const s=state.unit[unit];
-  return {unit,year:s.year,semester:s.semester,md:s.md,layer:s.layer,kar:s.kar,kab:s.kab,dealer:s.dealer,profile:s.profile};
+  return {unit,year:s.year,semester:s.semester,md:s.md,layer:s.layer,kar:s.kar,kab:s.kab,dealer:s.dealer,profile:s.profile,regionGroup:s.regionGroup||'Semua'};
 }
 function syncUnitStateFromPayload(unit,payload){
   const s=state.unit[unit], fo=payload.filterOptions;
@@ -413,6 +413,8 @@ function syncUnitStateFromPayload(unit,payload){
   s.kar=fo.karesidenan?.selected ?? s.kar;
   s.kab=fo.kabKota?.selected ?? s.kab;
   s.dealer=fo.dealer?.selected ?? s.dealer;
+  s.regionGroup=fo.regionGroup?.selected ?? s.regionGroup ?? 'Semua';
+  s.mapHighlightedGroup=s.regionGroup==='Semua'?null:s.regionGroup;
   if(payload.section3?.profileList?.selected) s.profile=payload.section3.profileList.selected;
 }
 
@@ -461,21 +463,34 @@ function buildSelect(fieldId,payload,paramKey,unit){
   return `<div class="filter-field"><label for="${fieldId}">${escapeHtml(payload.label)}</label><select id="${fieldId}" data-unit="${unit}" data-param="${paramKey}">${htmlOptions}</select></div>`;
 }
 function renderFilters(unit,fo){
-  return `<div class="filters-grid" id="filters-${unit}">
+  return `<div class="filters-scroll" role="region" aria-label="Filter dashboard, geser horizontal untuk melihat semua pilihan" tabindex="0"><div class="filters-grid" id="filters-${unit}">
     ${buildSelect(`${unit}-year`,fo.year,'year',unit)}
     ${buildSelect(`${unit}-semester`,fo.semester,'semester',unit)}
     ${buildSelect(`${unit}-md`,fo.mainDealer,'md',unit)}
     ${buildSelect(`${unit}-layer`,fo.layer,'layer',unit)}
     ${buildSelect(`${unit}-kar`,fo.karesidenan,'kar',unit)}
+    ${buildSelect(`${unit}-region-group`,fo.regionGroup||{label:'Kelompok Wilayah',options:['Semua',...MAP_REGION_GROUPS.map(g=>g.name)],selected:state.unit[unit].regionGroup||'Semua'},'regionGroup',unit)}
     ${buildSelect(`${unit}-kab`,fo.kabKota,'kab',unit)}
     ${buildSelect(`${unit}-dealer`,fo.dealer,'dealer',unit)}
-  </div>`;
+  </div></div>`;
 }
 function bindFilterEvents(unit){
+  const grid=document.getElementById(`filters-${unit}`);
+  const dealer=document.getElementById(`${unit}-dealer`);
+  if(dealer){
+    const measure=document.createElement('canvas').getContext('2d');
+    if(measure){
+      measure.font=getComputedStyle(dealer).font;
+      const width=Math.ceil(Math.max(250,...Array.from(dealer.options,o=>measure.measureText(o.text).width))+45);
+      grid.style.setProperty('--dealer-filter-width',`${width}px`);
+    }
+  }
   document.querySelectorAll(`#filters-${unit} select[data-param]`).forEach(sel=>{
+    sel.title=sel.selectedOptions[0]?.text||'';
     sel.addEventListener('change',async e=>{
       const param=e.target.dataset.param;
       state.unit[unit][param]=e.target.value;
+      if(param==='regionGroup'){state.unit[unit].mapHighlightedGroup=e.target.value==='Semua'?null:e.target.value;state.unit[unit].kab='Semua';state.unit[unit].dealer='Semua';}
       const skipHm=(param!=='year' && param!=='semester');
       await renderUnitPage(unit,{preserveScroll:true,skipHeatmap:skipHm});
     });
@@ -673,9 +688,12 @@ async function renderSatisfactionMap(mapData,unit){
     summary.querySelectorAll('[data-map-group]').forEach(btn=>{const active=btn.dataset.mapGroup===selectedGroup();btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active))});
     host.parentElement.querySelector('.ntt-inset')?.classList.toggle('group-highlight',selectedGroup()===mapGroupFor('NTT')?.name);
   }
-  summary.querySelectorAll('[data-map-group]').forEach(btn=>btn.addEventListener('click',()=>{
+  summary.querySelectorAll('[data-map-group]').forEach(btn=>btn.addEventListener('click',async()=>{
     state.unit[unit].mapHighlightedGroup=selectedGroup()===btn.dataset.mapGroup?null:btn.dataset.mapGroup;
+    state.unit[unit].regionGroup=state.unit[unit].mapHighlightedGroup||'Semua';
+    state.unit[unit].kab='Semua';state.unit[unit].dealer='Semua';
     applyGroupHighlight();
+    await renderUnitPage(unit,{preserveScroll:true,skipHeatmap:true});
   }));
   const statMap={}; (mapData.regions||[]).forEach(r=>statMap[r.region]=r);
   Object.entries(geometry).filter(([region])=>region!=='NTT').forEach(([region,feature])=>{
@@ -1641,7 +1659,7 @@ async function renderUnitPage(unit,{preserveScroll=false,skipHeatmap=false}={}){
     const reqYearBefore=s.year;
     const reqSemBefore=s.semester;
     const calls=[apiGet('unitPage',unitParams(unit)),apiGet('matrix',{...unitParams(unit),matrixMd:s.matrixMd})];
-    if(!skipHeatmap || !s.heatmap) calls.push(apiGet('heatmap',unitParams(unit)));
+    if(!skipHeatmap || !s.heatmap) calls.push(apiGet('heatmap',{unit,year:s.year,semester:s.semester}));
     const results=await Promise.all(calls);
     let page=results[0], matrix=results[1].matrix;
     let heatmap=page.heatmap || page.section3?.heatmap || (results[2]?.heatmap) || s.heatmap;
@@ -1655,7 +1673,7 @@ async function renderUnitPage(unit,{preserveScroll=false,skipHeatmap=false}={}){
         const retryRes=await Promise.all([
           apiGet('unitPage',unitParams(unit)),
           apiGet('matrix',{...unitParams(unit),matrixMd:s.matrixMd}),
-          apiGet('heatmap',unitParams(unit))
+          apiGet('heatmap',{unit,year:s.year,semester:s.semester})
         ]);
         page=retryRes[0]; matrix=retryRes[1].matrix;
         heatmap=page.heatmap || page.section3?.heatmap || (retryRes[2]?.heatmap) || heatmap;
@@ -1665,14 +1683,15 @@ async function renderUnitPage(unit,{preserveScroll=false,skipHeatmap=false}={}){
         }
       }
     }
+    if(s.regionGroup && s.regionGroup!=='Semua' && page.filterOptions?.regionGroup?.selected!==s.regionGroup) throw new Error('Backend belum mendukung filter kelompok wilayah. Perbarui deployment Apps Script menggunakan Kode.gs terbaru.');
     syncUnitStateFromPayload(unit,page);
     if(!page.heatmap && !page.section3?.heatmap && (String(reqYearBefore)!==String(s.year) || String(reqSemBefore)!==String(s.semester))){
-      const hmRes=await apiGet('heatmap',unitParams(unit));
+      const hmRes=await apiGet('heatmap',{unit,year:s.year,semester:s.semester});
       if(hmRes?.heatmap) heatmap=hmRes.heatmap;
     }
     s.heatmap=heatmap;s.matrix=matrix;s.page=page;
     const sec1=page.section1||{}, sec3=page.section3||{};
-    const scopeKey=[s.year,s.semester,s.md,s.layer,s.kar,s.kab].join('||');
+    const scopeKey=[s.year,s.semester,s.md,s.layer,s.kar,s.kab,s.regionGroup||'Semua'].join('||');
     if(sec1.ranking?.show && !sec1.ranking.empty){
       s.lastRanking=sec1.ranking;
       s.lastRankingScopeKey=scopeKey;
