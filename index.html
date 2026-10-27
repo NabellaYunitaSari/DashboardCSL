@@ -74,6 +74,8 @@
     .error-box{background:#FFF1F1;border:1px solid #FFD8D8;color:#9B1C1C}
 
     /* ===== MAP ===== */
+    .map-controls{display:flex;gap:4px;padding:4px;background:#F1F3F5;border-radius:9px;width:fit-content;margin-bottom:10px}.map-mode-btn{border:0;border-radius:6px;background:transparent;color:#666;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer}.map-mode-btn.active{background:#fff;color:#C8102E;box-shadow:0 1px 5px #0002}.map-mode-btn:focus-visible{outline:2px solid #E60012}.map-group-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:8px;margin-bottom:10px}.map-group-summary:empty{display:none}.map-group-item{background:#fff;color:inherit;text-align:left;cursor:pointer;display:flex;gap:8px;align-items:center;border:1px solid #E7E9EC;border-radius:7px;padding:8px;font-size:11px}.map-group-item:hover{border-color:#1665D8;background:#F6FAFF}.map-group-item.active{border-color:#1665D8;box-shadow:0 0 0 1px #1665D8;background:#EEF5FF}.map-group-item:focus-visible{outline:2px solid #1665D8;outline-offset:2px}.ntt-inset.group-highlight{border-color:#1665D8;box-shadow:0 0 0 2px #1665D8,0 4px 16px #0004}.ntt-inset.group-highlight path{stroke:#1665D8;stroke-width:3}.map-group-item>span{width:12px;height:28px;border-radius:3px;flex-shrink:0}.map-group-item b{margin-left:4px}.map-group-item small{display:block;color:#777;margin-top:3px}
+    @media(max-width:700px){.map-controls{grid-template-columns:1fr}.map-legend{max-width:calc(100% - 30px);font-size:10px}.ntt-inset{bottom:205px}}
     .map-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px}
     .map-header-title{font-size:12px;font-weight:800;color:#666;text-transform:uppercase;letter-spacing:.3px}
     .map-header-badge{font-size:10.5px;font-weight:700;color:#C8102E;background:#FFF1F1;border:1px solid #FFD8D8;padding:4px 9px;border-radius:20px}
@@ -596,6 +598,48 @@ async function handleMapRegionClick(unit,region){
   }catch(err){document.getElementById('app').insertAdjacentHTML('afterbegin',infoBox(err.message,'error'))}
   finally{setLoading(false)}
 }
+// Kelompok operasional sesuai referensi; Agriculture & Services mencakup NTT.
+const MAP_REGION_GROUPS=[
+  {name:'Agriculture Pangan',regions:['Bojonegoro','Ngawi','Madiun','Nganjuk']},
+  {name:'Agriculture Perkebunan',regions:['Magetan','Ponorogo','Bondowoso']},
+  {name:'Industrial Commuter',regions:['Sidoarjo','Gresik']},
+  {name:'Agriculture Mixed',regions:['Lamongan','Pacitan','Trenggalek','Tulungagung','Kab-Kodya Blitar','Lumajang','Jember','Probolinggo','Situbondo','Banyuwangi','Bangkalan','Sampang','Pamekasan','Sumenep']},
+  {name:'Industrial Mixed Rural',regions:['Tuban','Mojokerto','Jombang','Pasuruan','Kediri','Malang']},
+  {name:'Urban Commuter',regions:['Surabaya','Kota Malang']},
+  {name:'Agriculture & Services',description:'NTT',regions:['Kupang']}
+];
+function mapGroupFor(region){
+  const key=dashboardRegionName(region);
+  return MAP_REGION_GROUPS.find(g=>g.regions.some(r=>dashboardRegionName(r)===key));
+}
+function validMapValue(value){return value!==null && value!==undefined && value!=='' && Number.isFinite(Number(value))}
+function groupMapStats(mapData){
+  const stats={};
+  MAP_REGION_GROUPS.forEach(g=>{
+    const rows=(mapData.regions||[]).filter(r=>mapGroupFor(r.region)===g && validMapValue(r.satisfaction));
+    const value=rows.length?rows.reduce((sum,r)=>sum+Number(r.satisfaction),0)/rows.length:null;
+    stats[g.name]={value,count:rows.length,text:value===null?'Tidak ada data':value.toFixed(1)+'%'};
+  });
+  return stats;
+}
+function satisfactionMapColor(value,mapData){
+  if(value===null) return mapData.noDataColor||'#D9DEE5';
+  const min=Number(mapData.scaleMin),max=Number(mapData.scaleMax);
+  const t=max>min?Math.max(0,Math.min(1,(value-min)/(max-min))):.5;
+  const stops=[[230,0,18],[255,176,0],[53,168,83]],i=t<=.5?0:1,f=t<=.5?t*2:(t-.5)*2;
+  return '#'+stops[i].map((v,j)=>Math.round(v+(stops[i+1][j]-v)*f).toString(16).padStart(2,'0')).join('');
+}
+function renderMapControls(unit){
+  const selected=state.unit[unit].mapBasis||'satisfaction';
+  return `<div class="map-controls" id="map-controls-${unit}" role="group" aria-label="Tampilan peta">${[{value:'satisfaction',label:'Kabupaten/Kota'},{value:'group',label:'Kelompok Wilayah'}].map(o=>`<button type="button" class="map-mode-btn ${selected===o.value?'active':''}" data-map-basis="${o.value}" aria-pressed="${selected===o.value}">${o.label}</button>`).join('')}</div><div class="chart-subtitle" id="map-note-${unit}" role="status"></div><div class="map-group-summary" id="map-groups-${unit}"></div>`;
+}
+function bindMapControls(unit,mapData){
+  document.querySelectorAll(`#map-controls-${unit} [data-map-basis]`).forEach(btn=>btn.addEventListener('click',async()=>{
+    state.unit[unit].mapBasis=btn.dataset.mapBasis;
+    document.querySelectorAll(`#map-controls-${unit} [data-map-basis]`).forEach(el=>{const active=el===btn;el.classList.toggle('active',active);el.setAttribute('aria-pressed',String(active))});
+    await renderSatisfactionMap(mapData,unit);
+  }));
+}
 async function renderSatisfactionMap(mapData,unit){
   const host=document.getElementById('satisfaction-map');
   if(!host) return;
@@ -611,14 +655,37 @@ async function renderSatisfactionMap(mapData,unit){
   //    subdomains: 'abcd',
   //    maxZoom: 20
   //}).addTo(map);
+  const basis=state.unit[unit].mapBasis||'satisfaction', grouped=basis==='group', groupStats=groupMapStats(mapData);
+  const fill=(region,stat)=>grouped?satisfactionMapColor(groupStats[mapGroupFor(region)?.name]?.value??null,mapData):(stat?.color||mapData.noDataColor||'#D9DEE5');
+  const groupTooltip=region=>{const g=mapGroupFor(region),stat=groupStats[g?.name];return `<div style="font:12px Inter,Arial;line-height:1.6"><b>${escapeHtml(g?.name||'Belum terpetakan')}</b><br>Satisfaction kelompok: <b>${escapeHtml(stat?.text||'Tidak ada data')}</b><br>Rata-rata ${stat?.count||0} dari ${g?.regions.length||0} kabupaten/kota<br>Wilayah: ${escapeHtml(region)}<br><span>Rata-rata sederhana antarwilayah, tanpa bobot responden.</span></div>`};
+  document.getElementById(`map-note-${unit}`).textContent=grouped?'Warna menunjukkan rata-rata satisfaction kabupaten/kota dalam kelompok, tanpa bobot responden. Skala warna sama dengan mode Kabupaten/Kota.':'Warna menunjukkan nilai satisfaction masing-masing kabupaten/kota.';
+  const summary=document.getElementById(`map-groups-${unit}`);
+  summary.innerHTML=grouped?MAP_REGION_GROUPS.map(g=>`<button class="map-group-item" type="button" data-map-group="${escapeHtml(g.name)}" aria-pressed="false" title="${escapeHtml((g.description?g.description+': ':'')+g.regions.join(', '))}"><span style="background:${satisfactionMapColor(groupStats[g.name].value,mapData)}"></span><div>${escapeHtml(g.name)} <b>${groupStats[g.name].text}</b><small>${groupStats[g.name].count}/${g.regions.length} wilayah dengan data</small></div></button>`).join(''):'';
+  const regionLayers=[];
+  const selectedGroup=()=>grouped?state.unit[unit].mapHighlightedGroup:null;
+  const regionStyle=(region,color,hover=false)=>{
+    const selected=!!selectedGroup() && mapGroupFor(region)?.name===selectedGroup();
+    return {fillColor:color,color:selected?'#1665D8':hover?'#262626':'#FFFFFF',weight:selected?4:hover?2.5:1.5,fillOpacity:hover?1:.92};
+  };
+  function applyGroupHighlight(){
+    regionLayers.forEach(({region,color,layer})=>layer.setStyle(regionStyle(region,color)));
+    regionLayers.filter(({region})=>mapGroupFor(region)?.name===selectedGroup()).forEach(({layer})=>layer.bringToFront());
+    summary.querySelectorAll('[data-map-group]').forEach(btn=>{const active=btn.dataset.mapGroup===selectedGroup();btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active))});
+    host.parentElement.querySelector('.ntt-inset')?.classList.toggle('group-highlight',selectedGroup()===mapGroupFor('NTT')?.name);
+  }
+  summary.querySelectorAll('[data-map-group]').forEach(btn=>btn.addEventListener('click',()=>{
+    state.unit[unit].mapHighlightedGroup=selectedGroup()===btn.dataset.mapGroup?null:btn.dataset.mapGroup;
+    applyGroupHighlight();
+  }));
   const statMap={}; (mapData.regions||[]).forEach(r=>statMap[r.region]=r);
   Object.entries(geometry).filter(([region])=>region!=='NTT').forEach(([region,feature])=>{
     const stat=statMap[region]||null;
-    const color=stat?.color||mapData.noDataColor||'#D9DEE5';
-    const layer=L.geoJSON(feature,{style:{fillColor:color,color:'#FFFFFF',weight:1.5,fillOpacity:.92}}).addTo(map);
-    layer.bindTooltip(mapTooltipHtml(stat,mapData,region),{sticky:true,direction:'top',opacity:.97});
-    layer.on('mouseover',()=>layer.setStyle({fillColor:color,color:'#262626',weight:2.5,fillOpacity:1}));
-    layer.on('mouseout',()=>layer.setStyle({fillColor:color,color:'#FFFFFF',weight:1.5,fillOpacity:.92}));
+    const color=fill(region,stat);
+    const layer=L.geoJSON(feature,{style:regionStyle(region,color)}).addTo(map);
+    layer.bindTooltip((grouped?groupTooltip(region):mapTooltipHtml(stat,mapData,region)),{sticky:true,direction:'top',opacity:.97});
+    regionLayers.push({region,color,layer});
+    layer.on('mouseover',()=>layer.setStyle(regionStyle(region,color,true)));
+    layer.on('mouseout',()=>layer.setStyle(regionStyle(region,color)));
     layer.on('click',()=>handleMapRegionClick(unit,region));
     try{
       const pt=turf.pointOnFeature(feature).geometry.coordinates;
@@ -636,12 +703,13 @@ async function renderSatisfactionMap(mapData,unit){
 
   const oldInset=wrap.querySelector('.ntt-inset'); if(oldInset) oldInset.remove();
   if(geometry.NTT){
-    const stat=statMap.Kupang||statMap.NTT||null, color=stat?.color||mapData.noDataColor||'#D9DEE5';
+    const stat=statMap.Kupang||statMap.NTT||null, color=fill('NTT',stat);
     const inset=document.createElement('div'); inset.className='ntt-inset'; inset.title='Klik NTT untuk memfilter Kupang';
-    inset.innerHTML=`<div class="ntt-inset-label">NTT · ${escapeHtml(stat?.satisfactionText||'Tidak ada data')}</div>${featureToInsetSvg(geometry.NTT,color,'NTT')}`;
+    inset.innerHTML=`<div class="ntt-inset-label">${escapeHtml(grouped?('Agriculture & Services · '+groupStats['Agriculture & Services'].text):(stat?.satisfactionText||'Tidak ada data'))}</div>${featureToInsetSvg(geometry.NTT,color,'NTT')}`;
     inset.addEventListener('click',()=>handleMapRegionClick(unit,'NTT'));
     wrap.appendChild(inset);
   }
+  applyGroupHighlight();
 }
 
 /* ============================================================
@@ -1616,6 +1684,7 @@ async function renderUnitPage(unit,{preserveScroll=false,skipHeatmap=false}={}){
     const chartHtml=charts.map((c,i)=>chartCard(c?.title||'',c?.subtitle||'',chartIds[i])).join('');
     document.getElementById('app').innerHTML=`
       <section class="section section-1">${sectionTitle('SECTION 1','CSL PERFORMANCE INDEX')}
+        ${renderMapControls(unit)}
         <div class="map-header"><div class="map-header-title">Satisfaction Map</div><div class="map-header-badge">CLICK MAP TO FILTER</div></div>
         <div class="map-wrap"><div id="satisfaction-map"></div></div>
         <div style="height:16px"></div>${renderFilters(unit,page.filterOptions)}<div style="height:16px"></div>${renderKpis(sec1.kpi||[])}
@@ -1634,7 +1703,7 @@ async function renderUnitPage(unit,{preserveScroll=false,skipHeatmap=false}={}){
     bindFilterEvents(unit); bindProfileCards(unit); bindRankingModal(unit,activeRanking); renderMatrixSection(unit,matrix);
     renderSatisfactionPlot(`${unit}-sat`,sec1.satisfactionChart);renderGapPlot(`${unit}-gap`,sec1.targetGapChart);if(sec1.semesterDifferenceChart)renderDiffPlot(`${unit}-diff`,sec1.semesterDifferenceChart);
     renderSatisfactionPlot(`${unit}-sat`,sec1.satisfactionChart);renderGapPlot(`${unit}-gap`,sec1.targetGapChart);if(sec1.semesterDifferenceChart)renderDiffPlot(`${unit}-diff`,sec1.semesterDifferenceChart);
-    renderHeatmapPlot(`${unit}-heatmap`,heatmap);drawDemographics(unit,sec3.demographics);await renderSatisfactionMap(sec1.map,unit);
+    renderHeatmapPlot(`${unit}-heatmap`,heatmap);drawDemographics(unit,sec3.demographics);await bindMapControls(unit,sec1.map);await renderSatisfactionMap(sec1.map,unit);
     if(preserveScroll)window.scrollTo({top:scrollY,behavior:'auto'});else window.scrollTo({top:0,behavior:'auto'});
   }catch(err){document.getElementById('app').innerHTML=infoBox(err.message,'error')}
   finally{setLoading(false)}
