@@ -91,11 +91,19 @@
     .ntt-inset svg{position:absolute;left:0;right:0;bottom:0;width:100%;height:176px;background:#E9EEF2;pointer-events:none}
 
     /* ===== FILTERS ===== */
-    .filters-scroll{max-width:100%;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:thin;scrollbar-color:#B8BEC5 #F3F4F6}.filters-grid{display:grid;grid-template-columns:minmax(82px,.65fr) minmax(118px,.9fr) minmax(110px,.85fr) minmax(90px,.7fr) minmax(145px,1.1fr) minmax(190px,1.4fr) minmax(150px,1.1fr) minmax(var(--dealer-filter-width,300px),2.2fr);gap:10px;align-items:end;min-width:1055px}.filters-grid label{white-space:nowrap}
+    .filters-scroll{max-width:100%;overflow-x:visible;padding:2px 0}.filters-grid{display:grid;grid-template-columns:.65fr .95fr .85fr .75fr 1.15fr 1.35fr 1.1fr 1.65fr auto;gap:8px;align-items:end;width:100%}.filters-grid label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .filter-field{min-width:0}
-    .filter-field label{display:block;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;margin:0 0 5px}
-    .filter-field select{width:100%;height:38px;border:1px solid var(--csl-border);border-radius:7px;background:#fff;color:#262626;padding:0 9px;font-size:12px;outline:none;min-width:0}
+    .filter-field label{display:block;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.35px;margin:0 0 5px}
+    .filter-field select{width:100%;height:38px;border:1px solid var(--csl-border);border-radius:7px;background:#fff;color:#262626;padding:0 7px;font-size:12px;outline:none;min-width:0;text-overflow:ellipsis}
     .filter-field select:focus{border-color:#E60012;box-shadow:0 0 0 2px rgba(230,0,18,.08)}
+    .filter-search-wrap{display:flex;align-items:flex-end}
+    .filter-search-btn{height:38px;padding:0 15px;border-radius:7px;border:1px solid #E60012;background:linear-gradient(135deg,#C8102E 0%,#E60012 55%,#FF6B00 100%);color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;box-shadow:0 2px 6px rgba(230,0,18,.22);transition:all .16s ease}
+    .filter-search-btn:hover{filter:brightness(1.06);box-shadow:0 3px 10px rgba(230,0,18,.32);transform:translateY(-1px)}
+    .filter-search-btn:active{transform:translateY(0)}
+    .filter-search-btn.has-pending{animation:pulseFilterBtn 1.5s infinite;border-color:#FFB000;box-shadow:0 0 0 3px rgba(255,107,0,.25)}
+    @keyframes pulseFilterBtn{0%,100%{box-shadow:0 0 0 2px rgba(230,0,18,.22)}50%{box-shadow:0 0 0 5px rgba(255,107,0,.35)}}
+    @media(max-width:1100px){.filters-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.filter-search-wrap{grid-column:1/-1}.filter-search-btn{width:100%}}
+    @media(max-width:760px){.filters-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
     /* ===== KPI ===== */
     .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
@@ -472,29 +480,113 @@ function renderFilters(unit,fo){
     ${buildSelect(`${unit}-region-group`,fo.regionGroup||{label:'Kelompok Wilayah',options:['Semua',...MAP_REGION_GROUPS.map(g=>g.name)],selected:state.unit[unit].regionGroup||'Semua'},'regionGroup',unit)}
     ${buildSelect(`${unit}-kab`,fo.kabKota,'kab',unit)}
     ${buildSelect(`${unit}-dealer`,fo.dealer,'dealer',unit)}
+    <div class="filter-search-wrap"><button type="button" class="filter-search-btn" id="${unit}-filter-search-btn" title="Terapkan filter yang dipilih"><i class="fa-solid fa-magnifying-glass"></i><span>Search</span></button></div>
   </div></div>`;
 }
-function bindFilterEvents(unit){
-  const grid=document.getElementById(`filters-${unit}`);
-  const dealer=document.getElementById(`${unit}-dealer`);
-  if(dealer){
-    const measure=document.createElement('canvas').getContext('2d');
-    if(measure){
-      measure.font=getComputedStyle(dealer).font;
-      const width=Math.ceil(Math.max(250,...Array.from(dealer.options,o=>measure.measureText(o.text).width))+45);
-      grid.style.setProperty('--dealer-filter-width',`${width}px`);
-    }
+function updateDealerSelectWidth(unit){
+  // Kolom dealer sekarang proporsional mengikuti lebar halaman agar tidak muncul scrollbar horizontal.
+}
+function rebuildSelectOptionsDom(sel, optionsList, preferredValue){
+  if(!sel) return 'Semua';
+  const normalized=optionsList.map(o=>typeof o==='object'?{value:String(o.value),label:String(o.label)}:{value:String(o),label:String(o)});
+  const valid=normalized.some(o=>o.value===String(preferredValue)) ? String(preferredValue) : (normalized[0]?.value||'Semua');
+  sel.innerHTML=normalized.map(o=>`<option value="${escapeHtml(o.value)}" ${o.value===valid?'selected':''}>${escapeHtml(o.label)}</option>`).join('');
+  sel.value=valid;
+  sel.title=sel.selectedOptions[0]?.text||'';
+  return valid;
+}
+function cascadeDraftFilterOptions(unit, changedParam){
+  const fo=state.unit[unit]?.page?.filterOptions;
+  const tree=fo?.filterTree;
+  const yearEl=document.getElementById(`${unit}-year`);
+  const semEl=document.getElementById(`${unit}-semester`);
+  const mdEl=document.getElementById(`${unit}-md`);
+  const layerEl=document.getElementById(`${unit}-layer`);
+  const karEl=document.getElementById(`${unit}-kar`);
+  const rgEl=document.getElementById(`${unit}-region-group`);
+  const kabEl=document.getElementById(`${unit}-kab`);
+  const dealerEl=document.getElementById(`${unit}-dealer`);
+  if(!yearEl || !semEl || !mdEl || !layerEl || !karEl || !rgEl || !kabEl || !dealerEl) return;
+
+  if(changedParam==='regionGroup'){
+    kabEl.value='Semua';
+    dealerEl.value='Semua';
   }
-  document.querySelectorAll(`#filters-${unit} select[data-param]`).forEach(sel=>{
+
+  // Jika backend sudah mengirim filterTree, perbarui isi opsi dropdown bertingkat secara instan di browser tanpa loading penuh.
+  if(Array.isArray(tree) && tree.length){
+    const selYear=yearEl.value;
+    const selSem=semEl.value;
+    const selRg=rgEl.value;
+    const rgObj=(selRg && selRg!=='Semua') ? MAP_REGION_GROUPS.find(g=>g.name===selRg) : null;
+    const rgAllowed=rgObj ? new Set(rgObj.regions.map(r=>dashboardRegionName(r))) : null;
+
+    let rows=tree.filter(r=>(!selYear || selYear==='Semua' || r.year===selYear) && (!selSem || r.semester===selSem) && (!rgAllowed || rgAllowed.has(dashboardRegionName(r.kab))));
+
+    const mds=Array.from(new Set(rows.map(r=>r.md).filter(v=>v && v.toLowerCase()!=='semua'))).sort();
+    const curMd=rebuildSelectOptionsDom(mdEl,['Semua',...mds],mdEl.value);
+    if(curMd!=='Semua') rows=rows.filter(r=>r.md===curMd);
+
+    const layers=Array.from(new Set(rows.map(r=>r.layer).filter(Boolean))).sort();
+    const curLayer=rebuildSelectOptionsDom(layerEl,['Semua',...layers],layerEl.value);
+    if(curLayer!=='Semua') rows=rows.filter(r=>r.layer===curLayer);
+
+    const kars=Array.from(new Set(rows.map(r=>r.kar).filter(Boolean))).sort();
+    const curKar=rebuildSelectOptionsDom(karEl,['Semua',...kars],karEl.value);
+    if(curKar!=='Semua') rows=rows.filter(r=>r.kar===curKar);
+
+    const kabs=Array.from(new Set(rows.map(r=>dashboardRegionName(r.kab)).filter(Boolean))).sort();
+    const curKab=rebuildSelectOptionsDom(kabEl,['Semua',...kabs],kabEl.value);
+    if(curKab!=='Semua') rows=rows.filter(r=>dashboardRegionName(r.kab)===curKab);
+
+    const dealerMap=new Map();
+    rows.forEach(r=>{if(r.dealerCode && !dealerMap.has(r.dealerCode)) dealerMap.set(r.dealerCode,r.dealerLabel||r.dealerCode);});
+    const dealerOpts=[{value:'Semua',label:'Semua'},...Array.from(dealerMap.keys()).sort().map(code=>({value:code,label:dealerMap.get(code)}))];
+    rebuildSelectOptionsDom(dealerEl,dealerOpts,dealerEl.value);
+    updateDealerSelectWidth(unit);
+  }
+}
+function bindFilterEvents(unit){
+  updateDealerSelectWidth(unit);
+  const searchBtn=document.getElementById(`${unit}-filter-search-btn`);
+  const selects=document.querySelectorAll(`#filters-${unit} select[data-param]`);
+
+  function checkPendingChanges(){
+    const s=state.unit[unit];
+    let dirty=false;
+    selects.forEach(sel=>{
+      const p=sel.dataset.param;
+      const currentApplied=p==='regionGroup'?(s.regionGroup||'Semua'):String(s[p]??'');
+      if(String(sel.value)!==String(currentApplied)) dirty=true;
+    });
+    if(searchBtn) searchBtn.classList.toggle('has-pending',dirty);
+  }
+
+  selects.forEach(sel=>{
     sel.title=sel.selectedOptions[0]?.text||'';
-    sel.addEventListener('change',async e=>{
+    sel.addEventListener('change',e=>{
       const param=e.target.dataset.param;
-      state.unit[unit][param]=e.target.value;
-      if(param==='regionGroup'){state.unit[unit].mapHighlightedGroup=e.target.value==='Semua'?null:e.target.value;state.unit[unit].kab='Semua';state.unit[unit].dealer='Semua';}
-      const skipHm=(param!=='year' && param!=='semester');
-      await renderUnitPage(unit,{preserveScroll:true,skipHeatmap:skipHm});
+      sel.title=sel.selectedOptions[0]?.text||'';
+      cascadeDraftFilterOptions(unit, param);
+      checkPendingChanges();
     });
   });
+
+  if(searchBtn){
+    searchBtn.addEventListener('click',async()=>{
+      const s=state.unit[unit];
+      const prevYear=s.year;
+      const prevSem=s.semester;
+      selects.forEach(sel=>{
+        const param=sel.dataset.param;
+        s[param]=sel.value;
+      });
+      s.mapHighlightedGroup=(s.regionGroup && s.regionGroup!=='Semua')?s.regionGroup:null;
+      const skipHm=(String(s.year)===String(prevYear) && String(s.semester)===String(prevSem));
+      searchBtn.classList.remove('has-pending');
+      await renderUnitPage(unit,{preserveScroll:true,skipHeatmap:skipHm});
+    });
+  }
 }
 
 function renderPageSelector(){
